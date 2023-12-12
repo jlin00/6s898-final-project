@@ -4,6 +4,7 @@ title: 6.S898 Project Proposal
 description: A proposal for a research project that aims to develop a methodology to improve the robustness of contemporary neural networks. 
 date: 2023-11-09
 htmlwidgets: true
+hidden: true
 
 # Anonymize when submitting
 # authors:

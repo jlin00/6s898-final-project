@@ -5,6 +5,7 @@ description: Your blog post's abstract.
   This is an example of a distill-style blog post and the main elements it supports.
 date: 2022-12-01
 htmlwidgets: true
+hidden: true
 
 # Anonymize when submitting
 # authors:
