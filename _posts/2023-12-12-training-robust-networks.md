@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: Training Robust Networks
-description: "Exploring ResNet on TinyImageNet, unveiling brittleness and discovering robustment enhancement strategies via hyperparameter optimization"
+description: "Exploring ResNet on TinyImageNet, unveiling brittleness and discovering simple robustment enhancement strategies via hyperparameter optimization"
 date: 2023-12-12
 htmlwidgets: true
 
@@ -35,10 +35,10 @@ toc:
 # If you use this post as a template, delete this _styles block.
 ---
 # Introduction
-In the recent years, deep neural networks have emerged as a dominant force in the field of machine learning, achieving remarkable success across a variety of tasks, from VGG-16 in image classification to ChatGPT in natural language modeling. However, the very complexity that allows deep neural networks to learn and represent complex patterns and relationships can also leave them susceptible to challenges such as overfitting, adversarial attacks, and interpretability. The brittleness of deep neural networks, in particular, poses a significant challenge toward their deployment in real-world applications, especially those where reliability is paramount, like medical image diagnosis and autonomous vehicle navigation. Consequently, it is crucial to develop a better understanding of deep architectures and explore strategies for enhancing robustness. This project focuses specifically on ResNet, a model introduced in 2015 for image classification that is still widely used today. In particular, we will study the model's vulnerability to adversarial perturbations and, subsequently, work through a strategy to enhance its resilience through data augmentation and hyperparameter optimization. 
+In the recent years, deep neural networks have emerged as a dominant force in the field of machine learning, achieving remarkable success across a variety of tasks, from VGG-16 in image classification to ChatGPT in natural language modeling. However, the very complexity that allows deep neural networks to learn and represent complex patterns and relationships can also leave them susceptible to challenges such as overfitting, adversarial attacks, and interpretability. The brittleness of deep neural networks, in particular, poses a significant challenge toward their deployment in real-world applications, especially those where reliability is paramount, like medical image diagnosis and autonomous vehicle navigation. Consequently, it is crucial to develop a better understanding of deep architectures and explore strategies for enhancing robustness. This project focuses specifically on ResNet, a model introduced in 2015 for image classification that is still widely used today. In particular, we study the model's vulnerability to adversarial perturbations and, subsequently, work through a strategy to enhance its resilience through data augmentation and hyperparameter optimization. 
 
 # Related Works 
-ResNet<d-cite key="resnet2015"></d-cite> is a convolutional neural network architecture introduced in 2015 that sought to overcome numerical instability issues in deep networks and simplify the complexity of architecture search. It achieved this by incorporating skip connections, essentially allowing the training procedure to dynamically determine the optimal number of layers for the network. ResNet is trained on ImageNet<d-cite key="imagenet2014"></d-cite>, a popular benchmark in object category classification with a thousand classes and millions of images. For our project, we will use ResNet-18, a version of the original ResNet-34 model that is 18 layers deep, and TinyImageNet, a smaller version of ImageNet with around a hundred thousand images (64x64) and 200 classes. This is largely for computational ease. 
+ResNet<d-cite key="resnet2015"></d-cite> is a convolutional neural network architecture introduced in 2015 that sought to overcome numerical instability issues in deep networks and simplify the complexity of architecture search. It achieved this by incorporating skip connections, essentially allowing the training procedure to dynamically determine the optimal number of layers for the network. ResNet is trained on the ImageNet dataset<d-cite key="imagenet2014"></d-cite>, a popular benchmark in object category classification with a thousand classes and millions of images. For our project, we use ResNet-18, a version of the original ResNet-34 model that is 18 layers deep, and TinyImageNet, a smaller version of ImageNet with around a hundred thousand images and 200 classes. This is largely for computational ease. 
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -58,13 +58,137 @@ ResNet<d-cite key="resnet2015"></d-cite> is a convolutional neural network archi
     Figure 2. Sample Images from TinyImageNet
 </div>
 
-The brittleness of many deep neural networks for computer vision is well documented. For example, adding a tiny amount of random Gaussian noise, imperceptible to the human eye, can dramatically affect the accuracy and confidence of a network. In fact, we can optimize the input image to maximize the prediction error, generating small, non-random perturbations that we can use to alter the network's prediction behavior arbitrarily, a vulnerability that applies to a variety of networks<d-cite key="brittleness1"></d-cite><d-cite key="brittleness2"></d-cite>. 
+The brittleness of many deep neural networks for computer vision, including ResNet, is well documented. For example, adding a tiny amount of random Gaussian noise, imperceptible to the human eye, can dramatically affect the accuracy and confidence of a network. In fact, we can optimize over the input image to generate small, non-random perturbations that can be used to alter the network's prediction behavior arbitrarily, a vulnerability that applies to a variety of networks<d-cite key="brittleness1"></d-cite><d-cite key="brittleness2"></d-cite>. 
 
-In this project, we investigate two small perturbations: adding random Gaussian noise and modifying the colors of a small subset of pixels. We use hyperparameter search to finetune ResNet-18, aiming to create network robust to these pertubations without compromising significantly on accuracy. Specifically, we examine general hyperparameters like batch size, learning rate, number of frozen layers, and more. The ultimate goal is to define a straightforward and resource-efficient strategy for mitigating brittleness that can potentially be extended to other architectures and domains. 
+In this project, we investigate two small perturbations: adding random Gaussian noise and modifying the colors of a small subset of pixels. We use hyperparameter search to fine-tune ResNet-18, aiming to create a network robust to these perturbations without compromising significantly on accuracy. Specifically, we examine general hyperparameters like batch size, learning rate, number of frozen layers, and more. The ultimate goal is to define a straightforward and resource-efficient strategy for mitigating brittleness that can potentially be extended to other architectures and domains. 
 
 # Methodology
+## Baseline Model 
+The out-of-the-box ResNet18 model is pretrained on ImageNet, achieving about 55% accuracy on the ImageNet validation set. TinyImageNet is a subset of ImageNet with fewer classes; there is a potential need for further fine-tuning of the out-of-the-box model to optimize performance. Thus, we start off by performing a simple hyperparameter grid search over batch size and learning rate. Each model is trained on the TinyImageNet training set, a dataset of 40,000 images (downsampled from 100,000 for computational ease) with 200 classes (roughly uniform class distribution). The baseline model is then selected based on accuracy on the TinyImageNet validation set, a uniformly balanced dataset of 10,000 images.
+
+## Generating Adversarial Perturbations
+Next, we use gradient descent to create adversarial perturbations. The first perturbation is adding a small amount of Gaussian noise. We try to maximize the probability of the input image belonging to a wrong class (the inverse of the standard cross-entropy classification objective) while also penalizing the magnitude of the noise. This approach is more efficient and controllable compared to attempting to add a random sample of Gaussian noise with the hope of inducing misclassification.
+
+<div class="row mt-3">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/noise_steps.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-4"></div>
+</div>
+<div class="caption">
+    Figure 3. Noise added to image during each step in a sample gradient descent path for the first perturbation
+</div>
+
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/noise_examples.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 4. Sample images and their Gaussian-perturbed, misclassified versions
+</div>
+
+The other perturbation is randomly selecting a small subset of pixels (0.5%) and adjusting their color until the image is misclassified by the baseline model. A gradient descent approach that maximizes the probability of the input image belong to a wrong class is used to implement this perturbation; however, it is much more sensitive to initialization and can require retries, making it less resource-efficient. 
+
+<div class="row mt-3">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/pixel_steps.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-4"></div>
+</div>
+<div class="caption">
+    Figure 5. Noise added to image during each step in a sample gradient descent path for the second perturbation
+</div>
+
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/pixel_examples.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 6. Sample images and their pixel-perturbed, misclassified versions
+</div>
+
+We generate 11,000 adversarial examples using the Gaussian noise perturbation technique and the training examples that the baseline model correctly classifies. Of these adversarial examples, we use 10,000 of them to augment the training dataset (call it the augmented training set) and reserve 1,000 for hyperparameter optimization (call it the perturbed training set). We also generate 2,000 adversarial examples using the same perturbation technique and the validation examples that the baseline model correctly classifies. 1,000 of these are used for hyperparameter optimization (call it the perturbed validation set) while the rest are saved for out-of-sample evaluation (call it the hold-out validation set). 
+
+Note that we keep adversarial examples generated from the validation set out of the augmented training set to avoid lookahead bias. We want to avoid allowing the model to gain insights into the characteristics of examples that it will encounter in the validation set (since perturbed images are very similar to the original images), ensuring a more accurate assessment of the model's robustness and generalization capabilities.
+
+Finally, we generate an additional 500 examples using the pixel modification perturbation technique and the validation examples that the baseline correctly classifies (call it the out-of-distribution hold-out set). These examples are reserved for out-of-sample and out-of-distribution evaluation, assessing the model's ability to perform well on adversarial perturbations it has never seen before. 
+
+## Hyperparameter Optimization to Create a More Robust Model 
+Equipped with the augmented/additional datasets from the previous step, we start the process of model creation. The relevant metrics for selecting a model are original validation accuracy (derived from the original validation dataset from TinyImageNet), perturbed training accuracy, and perturbed validation accuracy. It is crucial to look at original validation accuracy to ensure that we are not creating robust models by compromising significantly on the original image classification task. In addition, accuracy on the perturbed train dataset tells us how well our model adjusts to the perturbation, while accuracy on the perturbed validation dataset provides an additional perspective by evaluating how well the model generalizes to perturbations on images it has never seen before. The same set of metrics is used in evaluating the final model on out-of-sample datasets, in addition to accuracy on the out-of-distribution hold-out set. 
+
+We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned form this hyperparameter search, we proceed to train the final model. 
+
+## Comparing Models via Visualization
+TODO
+
+# Results and Discussion 
+## Baseline Model
+First, we perform a grid search over batch sizes ranging from 128 to 512 and learning rates ranging from 0.0001 to 0.01. 
+
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/baseline1.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 7. Hyperparameter grid for baseline model
+</div>
+
+The results from the first hyperparameter search suggest that conservative learning rates and large batch sizes lead to good performance. Thus, we perform a finer grid search over batch sizes ranging from 256 to 512 and learning rates ranging from 0.00001 to 0.0001. 
+
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/baseline2.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 8. Finer hyperparameter grid for baseline model
+</div>
+
+Based on the results from the second hyperparameter search, we choose our baseline model to be ResNet-18 fine-tuned with a batch size of 256 and a learning rate of 0.00005. The baseline model achieves nearly 73% accuracy on the validation set, which is possibly due to the fact that TinyImageNet has less classes, so classification may be an easier task. 
+
+## Effect of Hyperparameters 
+#### Number of Unfrozen Layers
+First, we evaluate how the number of unfrozen layers (up to 3) affects the robustness of the trained models, whose weights can either be initialized from the baseline model or from the pre-trained/default model (in the diagram below, `is_finetuned=True` corresponds to the baseline model). 
+
+<div class="row mt-3">
+    <div class="col-sm-7 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_line1.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-1"></div>
+    <div class="col-sm-4 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_bar1.png" class="img-fluid" %}
+    </div>
+</div>
+<div class="caption">
+    Figure 9. Performance of trained models as number of frozen layers and source of initialized weights changes 
+</div>
+  
+First, we observe that training for more epochs does not improve the metrics of interest. This implies that training for robustness can be computationally efficient. Next, we observe there is a substantial drop in accuracy for the perturbed datasets compared to the original validation dataset, which is to be expected. Pairing the accuracies for the perturbed datasets across hyperparameter combinations, we observe that they are tightly correlated, which implies that our models are effectively adapting to the perturbation. 
+
+One interesting observation to note here is that accuracies on the perturbed datasets are significantly higher for the model initialized with default weights (20% compared to 7%). An intuitive explanation for this is that we have deliberately engineered a brittle baseline model, so the model is in a region of the optimization landscape characterized by high accuracy but low robustness. If we want achieve high accuracy and high robustness, we may need to start from a less unfavorable position in the optimization landscape. 
+
+Finally, we observe that freezing some layers can enhance robustness for models initialized from the default weights at the cost of performance on the original task. This aligns with intuition, since allowing all the weights to vary can lead to overfitting, resulting in more brittle networks.  
+
+#### Batch Size 
 
 
-# Results 
+#### Learning Rate
+
+## Out of Sample Evaluation
+
+## Model Comparison 
 
 # Conclusion and Next Steps
