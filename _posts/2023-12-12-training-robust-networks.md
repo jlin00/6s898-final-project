@@ -127,7 +127,11 @@ Equipped with the augmented/additional datasets from the previous step, we start
 We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned form this hyperparameter search, we proceed to train the final model. 
 
 ## Comparing Models via Visualization
-TODO
+Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to delve deeper into understanding the learned representations within the ResNet model. These feature maps, which capture the activations of learned filters or kernels across different regions of the input images, are the basis for our analysis. Each residual block in a ResNet consists of multiple convolutional layers. 
+
+After obtaining these feature maps, we compute the average activation values across the channels (neurons) within a specified layer of interest. This process provides insights into which regions or patterns in the input images contribute significantly to the neuron activations within that layer. We then create heatmap visualizations based on these average activations, highlighting the areas of the input data that have the most substantial impact on the network's feature detection process. This allows us to gain valuable insights into how the network perceives and prioritizes various features across its layers, aiding in our understanding of the model's inner workings
+
+We use this approach to compare the out-of-the-box ResNet18 model to the "hyperparameter-optimized" model, aiming to identify significant differences in feature prioritization or distinct patterns detected at various layers.
 
 # Results and Discussion 
 ## Baseline Model
