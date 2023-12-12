@@ -38,7 +38,7 @@ toc:
 In the recent years, deep neural networks have emerged as a dominant force in the field of machine learning, achieving remarkable success across a variety of tasks, from VGG-16 in image classification to ChatGPT in natural language modeling. However, the very complexity that allows deep neural networks to learn and represent complex patterns and relationships can also leave them susceptible to challenges such as overfitting, adversarial attacks, and interpretability. The brittleness of deep neural networks, in particular, poses a significant challenge toward their deployment in real-world applications, especially those where reliability is paramount, like medical image diagnosis and autonomous vehicle navigation. Consequently, it is crucial to develop a better understanding of deep architectures and explore strategies for enhancing robustness. This project focuses specifically on ResNet, a model introduced in 2015 for image classification that is still widely used today. In particular, we study the model's vulnerability to adversarial perturbations and, subsequently, work through a strategy to enhance its resilience through data augmentation and hyperparameter optimization. 
 
 # Related Works 
-ResNet<d-cite key="resnet2015"></d-cite> is a convolutional neural network architecture introduced in 2015 that sought to overcome numerical instability issues in deep networks and simplify the complexity of architecture search. It achieved this by incorporating skip connections, essentially allowing the training procedure to dynamically determine the optimal number of layers for the network. ResNet is trained on the ImageNet dataset<d-cite key="imagenet2014"></d-cite>, a popular benchmark in object category classification with a thousand classes and millions of images. For our project, we use ResNet-18, a version of the original ResNet-34 model that is 18 layers deep, and TinyImageNet, a smaller version of ImageNet with around a hundred thousand images and 200 classes. This is largely for computational ease. 
+ResNet<d-cite key="resnet2015"></d-cite> is a convolutional neural network architecture introduced in 2015 that sought to overcome numerical instability issues in deep networks and simplify the complexity of architecture search. It achieved this by incorporating skip connections, essentially allowing the training procedure to dynamically determine the optimal number of layers for the network. ResNet is trained on the ImageNet dataset<d-cite key="imagenet2014"></d-cite>, a popular benchmark in object category classification with 1,000 classes and millions of images. For our project, we use ResNet-18, a version of the original ResNet-34 model that is 18 layers deep, and TinyImageNet, a smaller version of ImageNet with around 100,000 images and 200 classes. This is largely for computational ease. 
 
 <div class="row mt-3">
     <div class="col-sm mt-3 mt-md-0">
@@ -178,17 +178,77 @@ First, we evaluate how the number of unfrozen layers (up to 3) affects the robus
   
 First, we observe that training for more epochs does not improve the metrics of interest. This implies that training for robustness can be computationally efficient. Next, we observe there is a substantial drop in accuracy for the perturbed datasets compared to the original validation dataset, which is to be expected. Pairing the accuracies for the perturbed datasets across hyperparameter combinations, we observe that they are tightly correlated, which implies that our models are effectively adapting to the perturbation. 
 
-One interesting observation to note here is that accuracies on the perturbed datasets are significantly higher for the model initialized with default weights (20% compared to 7%). An intuitive explanation for this is that we have deliberately engineered a brittle baseline model, so the model is in a region of the optimization landscape characterized by high accuracy but low robustness. If we want achieve high accuracy and high robustness, we may need to start from a less unfavorable position in the optimization landscape. 
+One interesting observation to note here is that accuracies on the perturbed datasets are significantly higher for the model initialized with default weights (27% compared to 10%). An intuitive explanation for this is that we have deliberately engineered a brittle baseline model, so the model is in a region of the optimization landscape characterized by high accuracy but low robustness. If we want achieve high accuracy and high robustness, we may need to start from a less unfavorable position in the optimization landscape. 
 
 Finally, we observe that freezing some layers can enhance robustness for models initialized from the default weights at the cost of performance on the original task. This aligns with intuition, since allowing all the weights to vary can lead to overfitting, resulting in more brittle networks.  
 
 #### Batch Size 
+Next, we evaluate how batch size (ranging from 4 to 512) affects the robustness of the trained models. 
 
+<div class="row mt-3">
+    <div class="col-sm-7 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_line2.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-1"></div>
+    <div class="col-sm-4 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_bar2.png" class="img-fluid" %}
+    </div>
+</div>
+<div class="caption">
+    Figure 10. Performance of trained models as batch size and source of initialized weights changes 
+</div>
+
+We notice immediately that batch size has a considerable effect on robustness. For both the perturbed training set and the perturbed validation set, accuracies are markedly lower with large batch sizes (around 15%) and higher with small batch sizes (around 70%). As expected, this comes at the expense of lower performance on the original task, with original validation accuracy dropping 10% as the batch size decreases from 512 to 4. Depending on the use case, this may be an efficient tradeoff to make!
 
 #### Learning Rate
+Finally, we evaluate how learning rate (ranging from 0.00001 to 0.001) affects the robustness of the trained models. 
+
+<div class="row mt-3">
+    <div class="col-sm-7 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_line3.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-1"></div>
+    <div class="col-sm-4 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/final_bar3.png" class="img-fluid" %}
+    </div>
+</div>
+<div class="caption">
+    Figure 11. Performance of trained models as learning rate and source of initialized weights changes 
+</div>
+
+Like batch size, learning rate significantly impacts robustness. The sweet spot for learning rate in terms of robustness seems to be around 0.00025, with original validation accuracy dropping as the learning rate becomes more conservative; a learning rate of 0.00025 leads to a 3% drop in performance. Like before, this may be a worthwhile tradeoff to make. 
 
 ## Out of Sample Evaluation
+Using the insights gained from the hyperparameter search, we define the final model with the following hyperparameters:
+
+```
+is_finetuned=False
+num_unfrozen_layers=3
+batch_size=8
+learning_rate=0.00025
+```
+
+Of course, this is likely not the optimal hyperparameter combination, since we were not able to perform a full grid search. The results are as follows:
+
+<div class="caption">
+    Table 1. Performance of final model 
+</div>
+
+| Dataset                        | Accuracy |
+| ------------------------------ | -------- |
+| Original validation            | 0.522754 |
+| Perturbed training             | 0.569572 |
+| Perturbed validation           | 0.442720 |
+| Hold-out validation            | 0.485621 |
+| Out-of-distribution validation | 0.489786 |
+
+Original validation, perturbed validation, and hold-out validation accuracy are somewhat lower than the optimistic estimates derived from the hyperparameter search. However, we observe that we are able to achieve nearly 50% accuracy on the out-of-distribution validation set, which contains pixel modification perturbations that the model was never trained on, underscoring the robustness and adaptability of our model. 
 
 ## Model Comparison 
+TODO
 
 # Conclusion and Next Steps
+In this project, we have undertaken a comprehensive exploration of enhancing ResNet through data augmentation with adversarial examples and straightforward hyperparameter tuning. Key highlights include the computational efficiency and simplicity of the employed technique, the resulting model's ability to adapt to both seen and unseen perturbations, and the capacity to finely control tradeoffs between robustness and accuracy thorugh the manipulation of diverse hyperparameters.
+
+There are many potential avenues for future exploration. One prospect involves expanding and refining the discussed techniques by continuing to explore the hyperparameter space, considering additional parameters or refining the search range. Additionally, applying this analysis to different architectures and domains could reveal further insights. Finally, broadening the scope of perturbations presents another avenue, offering the potential to develop more practical models tailored for real-world applications.
+
