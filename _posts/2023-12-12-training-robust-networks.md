@@ -115,19 +115,19 @@ The other perturbation is randomly selecting a small subset of pixels (0.5%) and
     Figure 6. Sample images and their pixel-perturbed, misclassified versions
 </div>
 
-We generate 11,000 adversarial examples using the Gaussian noise perturbation technique and the training examples that the baseline model correctly classifies. Of these adversarial examples, we use 10,000 of them to augment the training dataset (call it the augmented training set) and reserve 1,000 for hyperparameter optimization (call it the perturbed training set). We also generate 2,000 adversarial examples using the same perturbation technique and the validation examples that the baseline model correctly classifies. 1,000 of these are used for hyperparameter optimization (call it the perturbed validation set) while the rest are saved for out-of-sample evaluation (call it the hold-out validation set). 
+We generate 11,000 adversarial examples using the Gaussian noise perturbation technique on the training examples that the baseline model correctly classifies. Of these adversarial examples, we use 10,000 of them to augment the training dataset (call it the augmented training set) and reserve 1,000 for hyperparameter optimization (call it the perturbed training set). We also generate 2,000 adversarial examples using the same perturbation technique on the validation examples that the baseline model correctly classifies. 1,000 of these are used for hyperparameter optimization (call it the perturbed validation set) while the rest are saved for out-of-sample evaluation (call it the hold-out validation set). 
 
 Note that we keep adversarial examples generated from the validation set out of the augmented training set to avoid lookahead bias. We want to avoid allowing the model to gain insights into the characteristics of examples that it will encounter in the validation set (since perturbed images are very similar to the original images), ensuring a more accurate assessment of the model's robustness and generalization capabilities.
 
-Finally, we generate an additional 500 examples using the pixel modification perturbation technique and the validation examples that the baseline correctly classifies (call it the out-of-distribution hold-out set). These examples are reserved for out-of-sample and out-of-distribution evaluation, assessing the model's ability to perform well on adversarial perturbations it has never seen before. 
+Finally, we generate an additional 500 examples using the pixel modification perturbation technique on the validation examples that the baseline correctly classifies (call it the out-of-distribution hold-out set). These examples are reserved for out-of-sample and out-of-distribution evaluation, assessing the model's ability to perform well on adversarial perturbations it has never seen before. 
 
 ## Hyperparameter Optimization to Create a More Robust Model 
 Equipped with the augmented/additional datasets from the previous step, we start the process of model creation. The relevant metrics for selecting a model are original validation accuracy (derived from the original validation dataset from TinyImageNet), perturbed training accuracy, and perturbed validation accuracy. It is crucial to look at original validation accuracy to ensure that we are not creating robust models by compromising significantly on the original image classification task. In addition, accuracy on the perturbed train dataset tells us how well our model adjusts to the perturbation, while accuracy on the perturbed validation dataset provides an additional perspective by evaluating how well the model generalizes to perturbations on images it has never seen before. The same set of metrics is used in evaluating the final model on out-of-sample datasets, in addition to accuracy on the out-of-distribution hold-out set. 
 
-We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned form this hyperparameter search, we proceed to train the final model. 
+We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned from this hyperparameter search, we proceed to train the final model. 
 
 ## Comparing Models via Visualization
-Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to better understand the learned representations within the ResNet model. These feature maps capture the activations of learned filters or kernels across different regions of the input images and are the basis for our analysis<d-cite key="simonyan2014">. Each residual block in a ResNet consists of multiple convolutional layers. We register forawrd hooks (a feature in Pytorch that allows us to register a function to be called each time a forward pass is executed through a layer) for each convolutional and linear layer in the network to capture and store the activations produced during the forward pass. The layers in the ResNet model are as follows: 
+Finally, we transform the feature maps generated for an input image into interpretable visualizations to better understand the learned representations within the models. These feature maps capture the activations of learned filters or kernels across different regions of the input images and are the basis for our analysis<d-cite key="simonyan2014">. Each residual block in a ResNet consists of multiple convolutional layers. We register forawrd hooks (a feature in Pytorch that allows us to register a function to be called each time a forward pass is executed through a layer) for each convolutional and linear layer in the network to capture and store the activations produced during the forward pass. The layers in the ResNet model are as follows: 
 
 ```
 Layer: conv1, Activation shape: torch.Size([1, 64, 112, 112])
@@ -157,12 +157,10 @@ After obtaining these activations, we compute the average activation values acro
 
 We use this approach to compare the baseline model to the final model, aiming to identify significant differences in feature prioritization or the patterns detected at various layers.
 
-div class="row mt-3">
-    <div class="col-sm-3"></div>
-    <div class="col-sm-6 mt-3 mt-md-0">
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
         {% include figure.html path="assets/img/2023-12-12-training-robust-networks/heatmap_sample.png" class="img-fluid" %}
     </div>
-    <div class="col-sm-3"></div>
 </div>
 <div class="caption">
     Figure 7. Heatmap visualization for an image of a goldfish at four different layers
@@ -200,7 +198,7 @@ Based on the results from the second hyperparameter search, we choose our baseli
 
 ## Effect of Hyperparameters 
 #### Number of Unfrozen Layers
-First, we evaluate how the number of unfrozen layers (up to 3) affects the robustness of the trained models, whose weights can either be initialized from the baseline model or from the pre-trained/default model (in the diagram below, `is_finetuned=True` corresponds to the baseline model). 
+Next, we evaluate how the number of unfrozen layers (up to 3) affects the robustness of the trained models, whose weights can either be initialized from the baseline model or from the pre-trained/default model (in the diagram below, `is_finetuned=True` corresponds to the baseline model). 
 
 <div class="row mt-3">
     <div class="col-sm-7 mt-3 mt-md-0">
@@ -284,23 +282,29 @@ Of course, this is likely not the optimal hyperparameter combination, since we w
 Original validation, perturbed validation, and hold-out validation accuracy are somewhat lower than the optimistic estimates derived from the hyperparameter search. However, we observe that we are able to achieve nearly 50% accuracy on the out-of-distribution validation set, which contains pixel modification perturbations that the model was never trained on, underscoring the robustness and adaptability of our model. 
 
 ## Model Comparison 
-We observe the progression of feature map representations: starting from basic visual elements such as edges and textures in the initial layers, to more complex patterns in intermediate layers, and culminating in sophisticated, high-level feature representations in the deeper layers. This layered evolution is integral to the network’s ability to analyze and recognize complex images.
+Lastly, we observe the progression of feature map representations: starting from basic visual elements such as edges and textures in the initial layers, to more complex patterns in intermediate layers, and culminating in sophisticated, high-level feature representations in the deeper layers. This layered evolution is integral to the network’s ability to analyze and recognize complex images.
 
-When comparing the baseline model to the final model, there are very few (if any) differences in the initial layers. By the intermediate and deeper layers, there are clear differences in which aspects of the image have the greatest activation. This observation aligns with the foundational principles of convolutional neural networks, where initial layers tend to be more generic, capturing universal features that are commonly useful across various tasks. As a result, the similarity in the initial layers between the baseline and final models suggests that these early representations are robust and essential for basic image processing, irrespective of specific model optimizations or task-focused training.
+When comparing the baseline model to the final model, there are very few (if any) differences in the initial layers. By the intermediate and deeper layers, there are clear differences in which aspects of the original image have the greatest activation. This observation aligns with the foundational principles of convolutional neural networks, where initial layers tend to be more generic, capturing universal features that are commonly useful across various tasks. As a result, the similarity in the initial layers between the baseline and final models suggests that these early representations are robust and essential for basic image processing, irrespective of specific model optimizations or task-focused training.
 
 However, the divergence observed in the intermediate and deeper layers is indicative of the specialized learning that occurs as a result of hyperparameter tuning in the final model. These layers, being more task-specific, have adapted to capture more complex and abstract features relevant to the particular objectives of the final model.
 
 <div class="row mt-3">
-    <div class="col-sm-3"></div>
-    <div class="col-sm-6 mt-3 mt-md-0">
-        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/comparison.png" class="img-fluid" %}
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/comparison_original.png" class="img-fluid" %}
     </div>
-    <div class="col-sm-3"></div>
 </div>
 <div class="caption">
-    Figure 13. Comparison of the heatmaps for both models when passed in an image of a refrigerator
+    Figure 13. Comparison of the heatmaps for both models when passed in an image of a frog
 </div>
 
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/comparison_perturbed.png" class="img-fluid" %}
+    </div>
+</div>
+<div class="caption">
+    Figure 14. Comparison of the heatmaps for both models when passed in a perturbed image of a frog
+</div>
 
 # Conclusion and Next Steps
 In this project, we have undertaken a comprehensive exploration of enhancing ResNet through data augmentation with adversarial examples and straightforward hyperparameter tuning. Key highlights include the computational efficiency and simplicity of the employed technique, the resulting model's ability to adapt to both seen and unseen perturbations, and the capacity to finely control tradeoffs between robustness and accuracy thorugh the manipulation of diverse hyperparameters.
