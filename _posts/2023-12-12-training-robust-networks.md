@@ -127,11 +127,46 @@ Equipped with the augmented/additional datasets from the previous step, we start
 We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned form this hyperparameter search, we proceed to train the final model. 
 
 ## Comparing Models via Visualization
-Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to delve deeper into understanding the learned representations within the ResNet model. These feature maps, which capture the activations of learned filters or kernels across different regions of the input images, are the basis for our analysis. Each residual block in a ResNet consists of multiple convolutional layers. 
+Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to better understand the learned representations within the ResNet model. These feature maps capture the activations of learned filters or kernels across different regions of the input images and are the basis for our analysis<d-cite key="simonyan2014">. Each residual block in a ResNet consists of multiple convolutional layers. We register forawrd hooks (a feature in Pytorch that allows us to register a function to be called each time a forward pass is executed through a layer) for each convolutional and linear layer in the network to capture and store the activations produced during the forward pass. The layers in the ResNet model are as follows: 
 
-After obtaining these feature maps, we compute the average activation values across the channels (neurons) within a specified layer of interest. This process provides insights into which regions or patterns in the input images contribute significantly to the neuron activations within that layer. We then create heatmap visualizations based on these average activations, highlighting the areas of the input data that have the most substantial impact on the network's feature detection process. This allows us to gain valuable insights into how the network perceives and prioritizes various features across its layers, aiding in our understanding of the model's inner workings.
+```
+Layer: conv1, Activation shape: torch.Size([1, 64, 112, 112])
+Layer: layer1.0.conv1, Activation shape: torch.Size([1, 64, 56, 56])
+Layer: layer1.0.conv2, Activation shape: torch.Size([1, 64, 56, 56])
+Layer: layer1.1.conv1, Activation shape: torch.Size([1, 64, 56, 56])
+Layer: layer1.1.conv2, Activation shape: torch.Size([1, 64, 56, 56])
+Layer: layer2.0.conv1, Activation shape: torch.Size([1, 128, 28, 28])
+Layer: layer2.0.conv2, Activation shape: torch.Size([1, 128, 28, 28])
+Layer: layer2.0.downsample.0, Activation shape: torch.Size([1, 128, 28, 28])
+Layer: layer2.1.conv1, Activation shape: torch.Size([1, 128, 28, 28])
+Layer: layer2.1.conv2, Activation shape: torch.Size([1, 128, 28, 28])
+Layer: layer3.0.conv1, Activation shape: torch.Size([1, 256, 14, 14])
+Layer: layer3.0.conv2, Activation shape: torch.Size([1, 256, 14, 14])
+Layer: layer3.0.downsample.0, Activation shape: torch.Size([1, 256, 14, 14])
+Layer: layer3.1.conv1, Activation shape: torch.Size([1, 256, 14, 14])
+Layer: layer3.1.conv2, Activation shape: torch.Size([1, 256, 14, 14])
+Layer: layer4.0.conv1, Activation shape: torch.Size([1, 512, 7, 7])
+Layer: layer4.0.conv2, Activation shape: torch.Size([1, 512, 7, 7])
+Layer: layer4.0.downsample.0, Activation shape: torch.Size([1, 512, 7, 7])
+Layer: layer4.1.conv1, Activation shape: torch.Size([1, 512, 7, 7])
+Layer: layer4.1.conv2, Activation shape: torch.Size([1, 512, 7, 7])
+Layer: fc, Activation shape: torch.Size([1, 1000])
+```
+
+After obtaining these activations, we compute the average activation values across the channels (neurons) within a specified layer of interest. This process provides insights into which regions or patterns in the input images contribute significantly to the neuron activations within that layer. We then create heatmap visualizations based on these average activations, highlighting the areas of the input data that have the most substantial impact on the network's feature detection process. This allows us to gain valuable insights into how the network perceives and prioritizes various features across its layers, aiding in our understanding of the model's inner workings.
 
 We use this approach to compare the baseline model to the final model, aiming to identify significant differences in feature prioritization or the patterns detected at various layers.
+
+div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/heatmap_sample.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 7. Heatmap visualization for an image of a goldfish at four different layers
+</div>
 
 # Results and Discussion 
 ## Baseline Model
@@ -145,7 +180,7 @@ First, we perform a grid search over batch sizes ranging from 128 to 512 and lea
     <div class="col-sm-3"></div>
 </div>
 <div class="caption">
-    Figure 7. Hyperparameter grid for baseline model
+    Figure 8. Hyperparameter grid for baseline model
 </div>
 
 The results from the first hyperparameter search suggest that conservative learning rates and large batch sizes lead to good performance. Thus, we perform a finer grid search over batch sizes ranging from 256 to 512 and learning rates ranging from 0.00001 to 0.0001. 
@@ -158,7 +193,7 @@ The results from the first hyperparameter search suggest that conservative learn
     <div class="col-sm-3"></div>
 </div>
 <div class="caption">
-    Figure 8. Finer hyperparameter grid for baseline model
+    Figure 9. Finer hyperparameter grid for baseline model
 </div>
 
 Based on the results from the second hyperparameter search, we choose our baseline model to be ResNet-18 fine-tuned with a batch size of 256 and a learning rate of 0.00005. The baseline model achieves nearly 73% accuracy on the validation set, which is possibly due to the fact that TinyImageNet has less classes, so classification may be an easier task. 
@@ -177,7 +212,7 @@ First, we evaluate how the number of unfrozen layers (up to 3) affects the robus
     </div>
 </div>
 <div class="caption">
-    Figure 9. Performance of trained models as number of frozen layers and source of initialized weights changes 
+    Figure 10. Performance of trained models as number of frozen layers and source of initialized weights changes 
 </div>
   
 First, we observe that training for more epochs does not improve the metrics of interest. This implies that training for robustness can be computationally efficient. Next, we observe there is a substantial drop in accuracy for the perturbed datasets compared to the original validation dataset, which is to be expected. Pairing the accuracies for the perturbed datasets across hyperparameter combinations, we observe that they are tightly correlated, which implies that our models are effectively adapting to the perturbation. 
@@ -199,7 +234,7 @@ Next, we evaluate how batch size (ranging from 4 to 512) affects the robustness 
     </div>
 </div>
 <div class="caption">
-    Figure 10. Performance of trained models as batch size and source of initialized weights changes 
+    Figure 11. Performance of trained models as batch size and source of initialized weights changes 
 </div>
 
 We notice immediately that batch size has a considerable effect on robustness. For both the perturbed training set and the perturbed validation set, accuracies are markedly lower with large batch sizes (around 15%) and higher with small batch sizes (around 70%). As expected, this comes at the expense of lower performance on the original task, with original validation accuracy dropping 10% as the batch size decreases from 512 to 4. Depending on the use case, this may be an efficient tradeoff to make!
@@ -217,7 +252,7 @@ Finally, we evaluate how learning rate (ranging from 0.00001 to 0.001) affects t
     </div>
 </div>
 <div class="caption">
-    Figure 11. Performance of trained models as learning rate and source of initialized weights changes 
+    Figure 12. Performance of trained models as learning rate and source of initialized weights changes 
 </div>
 
 Like batch size, learning rate significantly impacts robustness. The sweet spot for learning rate in terms of robustness seems to be around 0.00025, with original validation accuracy dropping as the learning rate becomes more conservative; a learning rate of 0.00025 leads to a 3% drop in performance. Like before, this may be a worthwhile tradeoff to make. 
@@ -249,7 +284,23 @@ Of course, this is likely not the optimal hyperparameter combination, since we w
 Original validation, perturbed validation, and hold-out validation accuracy are somewhat lower than the optimistic estimates derived from the hyperparameter search. However, we observe that we are able to achieve nearly 50% accuracy on the out-of-distribution validation set, which contains pixel modification perturbations that the model was never trained on, underscoring the robustness and adaptability of our model. 
 
 ## Model Comparison 
-TODO
+We observe the progression of feature map representations: starting from basic visual elements such as edges and textures in the initial layers, to more complex patterns in intermediate layers, and culminating in sophisticated, high-level feature representations in the deeper layers. This layered evolution is integral to the network’s ability to analyze and recognize complex images.
+
+When comparing the baseline model to the final model, there are very few (if any) differences in the initial layers. By the intermediate and deeper layers, there are clear differences in which aspects of the image have the greatest activation. This observation aligns with the foundational principles of convolutional neural networks, where initial layers tend to be more generic, capturing universal features that are commonly useful across various tasks. As a result, the similarity in the initial layers between the baseline and final models suggests that these early representations are robust and essential for basic image processing, irrespective of specific model optimizations or task-focused training.
+
+However, the divergence observed in the intermediate and deeper layers is indicative of the specialized learning that occurs as a result of hyperparameter tuning in the final model. These layers, being more task-specific, have adapted to capture more complex and abstract features relevant to the particular objectives of the final model.
+
+<div class="row mt-3">
+    <div class="col-sm-3"></div>
+    <div class="col-sm-6 mt-3 mt-md-0">
+        {% include figure.html path="assets/img/2023-12-12-training-robust-networks/comparison.png" class="img-fluid" %}
+    </div>
+    <div class="col-sm-3"></div>
+</div>
+<div class="caption">
+    Figure 13. Comparison of the heatmaps for both models when passed in an image of a refrigerator
+</div>
+
 
 # Conclusion and Next Steps
 In this project, we have undertaken a comprehensive exploration of enhancing ResNet through data augmentation with adversarial examples and straightforward hyperparameter tuning. Key highlights include the computational efficiency and simplicity of the employed technique, the resulting model's ability to adapt to both seen and unseen perturbations, and the capacity to finely control tradeoffs between robustness and accuracy thorugh the manipulation of diverse hyperparameters.
