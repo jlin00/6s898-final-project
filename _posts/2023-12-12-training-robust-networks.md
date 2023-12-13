@@ -157,12 +157,10 @@ After obtaining these activations, we compute the average activation values acro
 
 We use this approach to compare the baseline model to the final model, aiming to identify significant differences in feature prioritization or the patterns detected at various layers.
 
-div class="row mt-3">
-    <div class="col-sm-3"></div>
-    <div class="col-sm-6 mt-3 mt-md-0">
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
         {% include figure.html path="assets/img/2023-12-12-training-robust-networks/heatmap_sample.png" class="img-fluid" %}
     </div>
-    <div class="col-sm-3"></div>
 </div>
 <div class="caption">
     Figure 7. Heatmap visualization at four different layers when an image of a goldfish is passed into the ResNet
@@ -296,7 +294,7 @@ However, the divergence observed in the intermediate and deeper layers is indica
     </div>
 </div>
 <div class="caption">
-    Figure 13. Comparison of the heatmaps for both models when passed in an image of a refrigerator
+    Figure 13. Comparison of the heatmaps for both models when passed in an image of a frog
 </div>
 
 <div class="row mt-3">
