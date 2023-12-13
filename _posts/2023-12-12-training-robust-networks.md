@@ -127,7 +127,7 @@ Equipped with the augmented/additional datasets from the previous step, we start
 We examine how varying four different hyperparameters affects the robustness of ResNet-18. The first hyperparameter involves initializing the model with either weights from the baseline model or the default pre-trained weights. The next hyperparameter is how many layers of ResNet-18 are frozen during the training procedure. The last two hyperparameters are batch size and learning rate. It is important to note that we do not conduct a search over a four-dimensional hyperparameter grid for computational reasons. Instead, we fix some hyperparameters at reasonable default values while we vary over the other hyperparameters. Using the insights gleaned form this hyperparameter search, we proceed to train the final model. 
 
 ## Comparing Models via Visualization
-Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to better understand the learned representations within the ResNet model. These feature maps capture the activations of learned filters or kernels across different regions of the input images and are the basis for our analysis<d-cite key="simonyan2014">. Each residual block in a ResNet consists of multiple convolutional layers. We register forawrd hooks (a feature in Pytorch that allows us to register a function to be called each time a forward pass is executed through a layer) for each convolutional and linear layer in the network to capture and store the activations produced during the forward pass. The layers in the ResNet model are as follows: 
+Furthermore, we transform the feature maps generated for an input image into interpretable visualizations to better understand the learned representations within the ResNet model. These feature maps capture the activations of learned filters or kernels across different regions of the input images and are the basis for our analysis<d-cite key="simonyan2014"></d-cite>. Each residual block in a ResNet consists of multiple convolutional layers. We register forawrd hooks (a feature in Pytorch that allows us to register a function to be called each time a forward pass is executed through a layer) for each convolutional and linear layer in the network to capture and store the activations produced during the forward pass. The layers in the ResNet model are as follows: 
 
 ```
 Layer: conv1, Activation shape: torch.Size([1, 64, 112, 112])
@@ -157,15 +157,15 @@ After obtaining these activations, we compute the average activation values acro
 
 We use this approach to compare the baseline model to the final model, aiming to identify significant differences in feature prioritization or the patterns detected at various layers.
 
-div class="row mt-3">
+<div class="row mt-3">
     <div class="col-sm-3"></div>
-    <div class="col-sm-6 mt-3 mt-md-0">
+    <div class="col-sm-6 mt-3 mt-md-0"> 
         {% include figure.html path="assets/img/2023-12-12-training-robust-networks/heatmap_sample.png" class="img-fluid" %}
     </div>
-    <div class="col-sm-3"></div>
+    <div class="col-sm-3"></div> 
 </div>
 <div class="caption">
-    Figure 7. Heatmap visualization for an image of a goldfish at four different layers
+    Figure 7. Heatmap visualization at four different layers when an image of a goldfish is passed into the ResNet
 </div>
 
 # Results and Discussion 
@@ -298,7 +298,7 @@ However, the divergence observed in the intermediate and deeper layers is indica
     <div class="col-sm-3"></div>
 </div>
 <div class="caption">
-    Figure 13. Comparison of the heatmaps for both models when passed in an image of a refrigerator
+    Figure 13.  Heatmap visualization at four different layers for the baseline model (top) and the final model (bottom) when an image of a refrigerator is passed into the ResNet
 </div>
 
 
